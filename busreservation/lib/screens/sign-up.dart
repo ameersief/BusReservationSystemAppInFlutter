@@ -1,9 +1,11 @@
+import 'dart:async';
 
 
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:busreservation/config.dart';
 
 class SignUp extends StatefulWidget{
   State<SignUp> createState(){
@@ -24,24 +26,36 @@ class _SignUpState extends State<SignUp>{
 
   void signup() async{
     if(password.text==confirmpass.text){
-    var response=await http.post(Uri.parse("http://192.168.1.5:8080/signup"),
-    body: jsonEncode({
-      "userName":username.text,
-      "password":password.text
-    }),
-    headers: {
-      "Content-Type":"application/json"
-    }
-    );
-    if(response.statusCode==200){
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("signup successful")));
-    }
-    else{
-      setState(() {
-        error="something went wrong";
-      });
-    }
+      try {
+        var response=await http.post(Uri.parse('${Config.baseUrl}/signup'),
+        body: jsonEncode({
+          "userName":username.text,
+          "password":password.text
+        }),
+        headers: {
+          "Content-Type":"application/json"
+        }
+        ).timeout(const Duration(seconds: 10));
+        if(response.statusCode==200){
+          if (mounted) {
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("signup successful")));
+          }
+        }
+        else{
+          if (mounted) {
+            setState(() {
+              error="something went wrong";
+            });
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            error="Connection failed";
+          });
+        }
+      }
     }else{
       setState(() {
         error="passwords did not match";

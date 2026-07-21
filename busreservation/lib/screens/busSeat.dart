@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:busreservation/models/busmodel.dart';
@@ -9,6 +10,7 @@ import 'package:busreservation/widgets/seat-contents.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:busreservation/config.dart';
 
 class BusSeat extends ConsumerStatefulWidget {
   const BusSeat({super.key, required this.bus,required this.bookedSeats});
@@ -40,22 +42,30 @@ class _BusSeatState extends ConsumerState<BusSeat> {
   }
 
   void bookSeats() async{
-    var response=await http.post(Uri.parse("http://192.168.1.5:8080/bookseats/${bus.busname}/${bus.startTime.toString()}"),body:jsonEncode({
-      "selectedSeats":selectedSeats,
-      "username":ref.read(userProvider.notifier).getUser(),
-      "busName":bus.busname,
-      "start":bus.start,
-      "end":bus.end,
-      "date":bus.startTime.toString(),
-      "price":totalprice,
-      "seats":selectedSeats.length
-    }),headers: {
-      "Content-Type":"application/json"
-    });
-    if(response.statusCode==200){
-    print(selectedSeats);
-    print(totalprice.toString());
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (ctx)=>ConfirmBooking(bus:bus,selectedSeats:selectedSeats,totalprice:totalprice)));
+    try {
+      var response=await http.post(Uri.parse('${Config.baseUrl}/bookseats/${bus.busname}/${bus.startTime.toString()}'),body:jsonEncode({
+        "selectedSeats":selectedSeats,
+        "username":ref.read(userProvider.notifier).getUser(),
+        "busName":bus.busname,
+        "start":bus.start,
+        "end":bus.end,
+        "date":bus.startTime.toString(),
+        "price":totalprice,
+        "seats":selectedSeats.length
+      }),headers: {
+        "Content-Type":"application/json"
+      }).timeout(const Duration(seconds: 10));
+      if(response.statusCode==200){
+        print(selectedSeats);
+        print(totalprice.toString());
+        if (mounted) {
+          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (ctx)=>ConfirmBooking(bus:bus,selectedSeats:selectedSeats,totalprice:totalprice)));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Connection failed")));
+      }
     }
   }
 

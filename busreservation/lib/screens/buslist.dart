@@ -1,3 +1,4 @@
+import 'dart:async';
 
 
 import 'dart:convert';
@@ -6,6 +7,7 @@ import 'package:busreservation/models/busmodel.dart';
 import 'package:busreservation/widgets/bus.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:busreservation/config.dart';
 
 class BusList extends StatefulWidget{
   BusList({super.key,required this.start,required this.end,required this.date});
@@ -24,19 +26,24 @@ class _BusListState extends State<BusList> {
   late List<BusModel> busses=[];
 
   void getApi()async{
-  var url=Uri.parse("http://192.168.1.5:8080/busses/$start/$end");
-    var response=await http.get(url);
-    List res=jsonDecode(response.body);
-    if(response.statusCode==200){
-      List<BusModel> tmp=[];
-      res.forEach((e) {
-        tmp.add(BusModel(busname: e["busName"], start: e["start"], end: e["end"], startTime: date, price: e["price"].toDouble()));
-      });
-      setState(() {
-      busses=tmp;
-      });
+    var url=Uri.parse('${Config.baseUrl}/busses/$start/$end');
+    try {
+      var response=await http.get(url).timeout(const Duration(seconds: 10));
+      if(response.statusCode==200){
+        List res=jsonDecode(response.body);
+        List<BusModel> tmp=[];
+        res.forEach((e) {
+          tmp.add(BusModel(busname: e["busName"], start: e["start"], end: e["end"], startTime: date, price: e["price"].toDouble()));
+        });
+        if (mounted) {
+          setState(() {
+            busses=tmp;
+          });
+        }
+      }
+    } catch (e) {
+      // Ignore or handle
     }
-
   }
   @override
   void initState() {
