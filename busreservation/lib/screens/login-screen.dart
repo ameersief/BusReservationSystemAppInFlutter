@@ -1,3 +1,4 @@
+import 'dart:async';
 
 import "dart:convert";
 
@@ -7,6 +8,7 @@ import "package:flutter/material.dart";
 import "package:http/http.dart" as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:busreservation/providers/user-provider.dart';
+import 'package:busreservation/config.dart';
 class LoginScreen extends ConsumerStatefulWidget{
 
   ConsumerState<LoginScreen> createState(){
@@ -19,27 +21,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen>{
   TextEditingController password=TextEditingController();
 
   void login() async{
-    var response=await http.post(Uri.parse("http://192.168.1.5:8080/login"),
-    body:jsonEncode({
-      "userName":username.text,
-      "password":password.text
-    }),
-    headers: {
-      "Content-Type":"application/json"
-    }
-    );
-    if(response.statusCode==200){
-      ref.read(userProvider.notifier).setUser(username.text);
-      setState(() {
-      error=false;
-      });
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (ctx)=>HomeScreen()));
-    }
-    else{
-      setState(() {
-      error=true;
-        
-      });
+    try {
+      var response=await http.post(Uri.parse('${Config.baseUrl}/login'),
+      body:jsonEncode({
+        "userName":username.text,
+        "password":password.text
+      }),
+      headers: {
+        "Content-Type":"application/json"
+      }
+      ).timeout(const Duration(seconds: 10));
+      if(response.statusCode==200){
+        ref.read(userProvider.notifier).setUser(username.text);
+        if (mounted) {
+          setState(() {
+            error=false;
+          });
+          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (ctx)=>HomeScreen()));
+        }
+      }
+      else{
+        if (mounted) {
+          setState(() {
+            error=true;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          error=true;
+        });
+      }
     }
   }
 
